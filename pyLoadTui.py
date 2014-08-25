@@ -1,0 +1,361 @@
+"""
+ This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+ author: ecksofa
+"""
+
+import os
+import sys
+import time
+import curses
+from module.remote.thriftbackend.ThriftClient import  ThriftClient, WrongLogin
+from getpass import getpass
+
+path = os.path.dirname(os.path.realpath(sys.argv[0])) + "/"
+
+fileProfiles = path + "profiles"
+
+username = ""
+password = ""
+host = ""
+port = 0
+
+reloadTime = 2
+downloadStatus = ["Finished", "Offline", "Online", "Queued", "Skipped", "Waiting", "TempOffline", "Starting", "Failed", "Aborted", "Decrypting", "Custom", "Downloading", "Processing", "Unknown"]
+
+class Tabs:
+	def __init__(self, window):
+		self.window = window
+		self.selected = 0
+#		self.entries = ["Downloads", "Queue", "Collector", "pyLoad", "TUI"]
+		self.entries = ["Downloads", "Queue", "Collector"]
+	
+	def draw(self):
+		self.window.erase()
+		
+		self.window.move(0,0)
+		for i,e in enumerate(self.entries):
+			if i > 0:
+				self.window.addstr(" ")
+			if i == self.selected:
+				self.window.addstr(e, curses.A_REVERSE)	
+			else:
+				self.window.addstr(e)	
+			
+		self.window.refresh()
+	
+	def move(self, d):
+		self.selected += d
+		if self.selected < 0:
+			self.selected = 0
+		if self.selected > len(self.entries)-1:
+			self.selected = len(self.entries)-1
+		
+		self.draw()
+		return self.selected
+		
+
+class Downloads:	
+	def __init__(self, window):
+		self.window = window
+		self.load()
+		self.scrollOffset = 0
+	
+	def load(self):
+		self.entries = client.statusDownloads()
+		
+		self.lines = []
+		for e in self.entries:
+			tmp =  ("  " + e.name)
+			self.lines.append(tmp)
+			tmp = ("   " + downloadStatus[e.status])
+			tmp += ("  " + e.format_eta + " @ " + ("%.2f" % (e.speed / 1024.)) + " KiB/s")
+	#		tmp += ("\t" + e.format_size)
+	#		tmp += ("\t" + str(e.percent) + "% / " + ("%.2f" % ((e.size-e.bleft) / (1024*1024.))) + " MiB")
+			tmp += ("  " + ( "%.2f MiB / %.2f MiB" % ((e.size-e.bleft) / (1024*1024.), e.size / (1024*1024.)) ) )
+			self.lines.append(tmp)
+			barwidth = width - 14
+			tmp = ("   [" + "#"*int(e.percent/100.*barwidth) + " "*int(barwidth - e.percent/100.*barwidth) + "]")
+			self.lines.append(tmp)
+	
+	def handleKey(self, key):
+		pass
+	
+	def scroll(self, scr):
+		if scr < 0:
+			if self.scrollOffset + scr > 0:
+				self.scrollOffset += scr
+			else:
+				self.scrollOffset = 0
+		elif scr > 0:
+			if self.scrollOffset + scr < len(self.lines) - (self.window.getmaxyx()[0]-2):
+				self.scrollOffset += scr
+			else:
+				self.scrollOffset = len(self.lines) - (self.window.getmaxyx()[0]-2)
+	
+	def draw(self):
+		self.window.erase()
+		
+		self.window.move(1,0)
+		for l in self.lines[self.scrollOffset : self.scrollOffset+self.window.getmaxyx()[0]-2]:
+			self.window.addstr(l + "\n")	
+			
+		self.window.border()
+		self.window.refresh()
+
+class Queue:	
+	def __init__(self, window):
+		self.window = window
+		self.load()
+		self.scrollOffset = 0
+		self.selected = 0
+	
+	def load(self):
+		self.entries = client.getQueueData()
+		
+		self.items = []
+		for e in self.entries:
+			self.items.append([])
+			tmp =  ("  " + e.name)
+			self.items[-1].append(tmp)
+			self.items[-1].append(True)
+			self.items[-1].append([])
+			for l in e.links:
+				tmp = "   " + l.name
+				tmp += " (" + downloadStatus[l.status] + ")"
+				self.items[-1][2].append(tmp)
+		self.prepareLines()
+		
+	def handleKey(self, key):
+		if key == ord(' '):
+			if self.lines[self.selected][2] == -1:
+				self.items[self.lines[self.selected][1]][1] = not self.items[self.lines[self.selected][1]][1]
+				self.prepareLines()
+				self.draw()
+	
+	def scroll(self, scr):
+		self.selected += scr
+		if self.selected < 0:
+			self.selected = 0
+		elif self.selected > len(self.lines) - 1:
+			self.selected = len(self.lines) - 1
+		if self.scrollOffset > self.selected:
+			self.scrollOffset = self.selected
+		elif self.scrollOffset < self.selected - (self.window.getmaxyx()[0]-2) + 1:
+			self.scrollOffset = self.selected - (self.window.getmaxyx()[0]-2) + 1
+#		if scr < 0:
+#			if self.scrollOffset + scr > 0:
+#				self.scrollOffset += scr
+#			else:
+#				self.scrollOffset = 0
+#		elif scr > 0:
+#			if self.scrollOffset + scr < len(self.lines) - (self.window.getmaxyx()[0]-2):
+#				self.scrollOffset += scr
+#			else:
+#				self.scrollOffset = len(self.lines) - (self.window.getmaxyx()[0]-2)
+				
+	def prepareLines(self):
+		self.lines = []
+		for k, i in enumerate(self.items):
+			self.lines.append([])
+			self.lines[-1].append(i[0])
+			self.lines[-1].append(k)
+			self.lines[-1].append(-1)
+			if i[1]:
+				for l, j in enumerate(i[2]):
+					self.lines.append([])
+					self.lines[-1].append(j)
+					self.lines[-1].append(k)
+					self.lines[-1].append(l)
+	
+	def draw(self):
+		global log
+		self.window.erase()
+		
+		self.window.move(1,0)
+		
+		lCount = 0
+		for i, l in enumerate(self.lines[self.scrollOffset : self.scrollOffset+self.window.getmaxyx()[0]-2]):
+			attr = curses.A_NORMAL
+			if i + self.scrollOffset == self.selected:
+				attr = attr | curses.A_REVERSE
+			if l[2] == -1:
+				attr = attr | curses.color_pair(1)
+			if l[0][-8:] == "(Failed)":
+				attr = attr | curses.color_pair(2)
+				
+			self.window.addstr(l[0] + "\n", attr)	
+			
+		self.window.border()
+		self.window.refresh()
+
+class Collector:	
+	def __init__(self, window):
+		self.window = window
+		self.load()
+		self.scrollOffset = 0
+	
+	def load(self):
+		self.entries = client.getCollectorData()
+		
+		self.items = []
+		for e in self.entries:
+			self.items.append([])
+			tmp =  ("  " + e.name)
+			self.items[-1].append(tmp)
+			self.items[-1].append(True)
+			self.items[-1].append([])
+			for l in e.links:
+				tmp = "    " + l.name
+				tmp += " (" + downloadStatus[l.status] + ") "
+				self.items[-1][2].append(tmp)
+		self.prepareLines()
+	
+	def handleKey(self, key):
+		pass
+	
+	def scroll(self, scr):
+		if scr < 0:
+			if self.scrollOffset + scr > 0:
+				self.scrollOffset += scr
+			else:
+				self.scrollOffset = 0
+		elif scr > 0:
+			if self.scrollOffset + scr < len(self.lines) - (self.window.getmaxyx()[0]-2):
+				self.scrollOffset += scr
+			else:
+				self.scrollOffset = len(self.lines) - (self.window.getmaxyx()[0]-2)
+				
+	def prepareLines(self):
+		self.lines = []
+		for i in self.items:
+			self.lines.append(i[0])
+			if i[1]:
+				for j in i[2]:
+					self.lines.append(j)
+	
+	def draw(self):
+		global log
+		self.window.erase()
+		
+		self.window.move(1,0)
+		
+		lCount = 0
+		for l in self.lines[self.scrollOffset : self.scrollOffset+self.window.getmaxyx()[0]-2]:
+			self.window.addstr(l + "\n")	
+			
+		self.window.border()
+		self.window.refresh()
+
+def loadDefaultProfile():
+	global fileProfiles
+	global username, host, port
+	
+	profiles = []
+	
+	fProfiles = open(fileProfiles, 'r')
+	for l in fProfiles:
+		if '#' in l:
+			l = l[:l.find('#')]
+		l_split = l.split()
+		if len(l_split) != 4:
+			continue
+		profiles.append([l_split[0], l_split[1], l_split[2], int(l_split[3])])
+	fProfiles.close()
+	
+	if(len(profiles) == 0):
+		profiles.append(["default"])
+		print "Please create a profile containing information about your pyLoad server.\a"
+		print "These informations will be saved to the profiles file in the script's directory."
+		print "Only user name, host address and port will be saved, NOT your password."
+		profiles[0].append( raw_input('user name: ') )
+		profiles[0].append( raw_input('host address: ') )
+		profiles[0].append( int(raw_input('host port: ')) )
+		
+		fProfiles = open(fileProfiles, 'a')
+		fProfiles.write("\n" + profiles[0][0] + "\t" + profiles[0][1] + "\t" + profiles[0][2] + "\t" + str(profiles[0][3]))
+		fProfiles.close()
+		
+		
+	username = profiles[0][1]
+	host = profiles[0][2]
+	port = profiles[0][3]
+
+def initClient():
+	try:
+		global client
+		client = ThriftClient(host, port, username, password)
+	except:
+		print "Login failed: " + username + "@" + host + ":" + str(port)
+		exit()
+
+
+def main(stdscr):
+	global reloadTime
+	
+	curses.noecho(); curses.cbreak(); curses.curs_set(0); stdscr.keypad(1)
+	(h,w) = stdscr.getmaxyx()
+	global height
+	height = h
+	global width
+	width = w
+	curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_BLACK)
+	curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+	stdscr.refresh()
+	
+	winTabs = curses.newwin(1, width, 0, 0)
+	winDownloads = curses.newwin(height-2, width, 1, 0)
+	winQueue = curses.newwin(height-2, width, 1, 0)
+	winCollector = curses.newwin(height-2, width, 1, 0)
+	
+	wTabs = Tabs(winTabs)
+	wDownloads = Downloads(winDownloads)
+	wQueue = Queue(winQueue)
+	wCollector = Collector(winCollector)
+	wArray = [wDownloads, wQueue, wCollector]
+	
+	wCurrent = wArray[0]
+	
+	wTabs.draw()
+	
+	stdscr.timeout(reloadTime * 1000)
+	last_time = time.time() + reloadTime
+	while True:
+		if round(time.time() - last_time) > reloadTime:
+			last_time = time.time()
+			wCurrent.load()
+			
+		wCurrent.draw()
+		
+		key = stdscr.getch()
+
+		if key == curses.KEY_HOME:
+			wCurrent = wArray[wTabs.move(-1)]
+		elif key == curses.KEY_END:
+			wCurrent = wArray[wTabs.move(1)]
+		elif key == curses.KEY_UP:
+			wCurrent.scroll(-1)
+		elif key == curses.KEY_DOWN:
+			wCurrent.scroll(1)   
+		else:
+			wCurrent.handleKey(key)
+	
+	stdscr.getch()
+	curses.echo(); curses.nocbreak(); stdscr.keypad(0)
+	curses.endwin()
+
+loadDefaultProfile()
+password = getpass("password: ")
+initClient()
+curses.wrapper(main)

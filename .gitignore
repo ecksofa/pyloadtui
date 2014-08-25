@@ -1,0 +1,4 @@
+ignore-this/
+*~
+*.pyc
+log
