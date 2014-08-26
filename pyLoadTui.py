@@ -112,6 +112,12 @@ class Downloads:
 			
 		self.window.border()
 		self.window.refresh()
+	
+	def getDestination(self):
+		return 1
+	
+	def getPropPackName(self):
+		return ""
 
 class Queue:	
 	def __init__(self, window):
@@ -126,12 +132,12 @@ class Queue:
 		self.items = []
 		for e in self.entries:
 			self.items.append([])
-			tmp =  ("  " + e.name)
+			tmp =  (e.name)
 			self.items[-1].append(tmp)
 			self.items[-1].append(True)
 			self.items[-1].append([])
 			for l in e.links:
-				tmp = "   " + l.name
+				tmp = l.name
 				tmp += " (" + downloadStatus[l.status] + ")"
 				self.items[-1][2].append([tmp, l.fid])
 			self.items[-1].append(e.pid)
@@ -178,13 +184,13 @@ class Queue:
 		self.lines = []
 		for k, i in enumerate(self.items):
 			self.lines.append([])
-			self.lines[-1].append(i[0])
+			self.lines[-1].append("  " + i[0])
 			self.lines[-1].append(k)
 			self.lines[-1].append(-1)
 			if i[1]:
 				for l, j in enumerate(i[2]):
 					self.lines.append([])
-					self.lines[-1].append(j[0])
+					self.lines[-1].append("   " + j[0])
 					self.lines[-1].append(k)
 					self.lines[-1].append(l)
 	
@@ -208,6 +214,12 @@ class Queue:
 			
 		self.window.border()
 		self.window.refresh()
+	
+	def getDestination(self):
+		return 1
+	
+	def getPropPackName(self):
+		return self.items[self.lines[self.selected][1]][0]
 
 class Collector:	
 	def __init__(self, window):
@@ -222,12 +234,12 @@ class Collector:
 		self.items = []
 		for e in self.entries:
 			self.items.append([])
-			tmp =  ("  " + e.name)
+			tmp =  (e.name)
 			self.items[-1].append(tmp)
 			self.items[-1].append(True)
 			self.items[-1].append([])
 			for l in e.links:
-				tmp = "    " + l.name
+				tmp = l.name
 				tmp += " (" + downloadStatus[l.status] + ")"
 				self.items[-1][2].append([tmp, l.fid])
 			self.items[-1].append(e.pid)
@@ -264,13 +276,13 @@ class Collector:
 		self.lines = []
 		for k, i in enumerate(self.items):
 			self.lines.append([])
-			self.lines[-1].append(i[0])
+			self.lines[-1].append("  " + i[0])
 			self.lines[-1].append(k)
 			self.lines[-1].append(-1)
 			if i[1]:
 				for l, j in enumerate(i[2]):
 					self.lines.append([])
-					self.lines[-1].append(j[0])
+					self.lines[-1].append("    " + j[0])
 					self.lines[-1].append(k)
 					self.lines[-1].append(l)
 	
@@ -294,6 +306,12 @@ class Collector:
 			
 		self.window.border()
 		self.window.refresh()
+	
+	def getDestination(self):
+		return 0
+	
+	def getPropPackName(self):
+		return self.items[self.lines[self.selected][1]][0]
 
 def drawFooter():
 		winFooter = curses.newwin(1, width, height-1, 0)
@@ -309,6 +327,9 @@ def loadDefaultProfile():
 	global username, host, port
 	
 	profiles = []
+	
+	if not os.path.isfile(fileProfiles):
+		open(fileProfiles, 'a').close()
 	
 	fProfiles = open(fileProfiles, 'r')
 	for l in fProfiles:
@@ -345,6 +366,66 @@ def initClient():
 	except:
 		print "Login failed: " + username + "@" + host + ":" + str(port)
 		exit()
+
+def addLink(destination, propPackName):
+	curses.echo(); curses.curs_set(1)
+	winLinks = curses.newwin(height, width, 0, 0)
+	
+	while(True):
+		winLinks.erase()
+		winLinks.addstr(0, 0, "Enter package name")
+		if not propPackName == "":
+			 winLinks.addstr("[" + propPackName + "]")
+		winLinks.addstr(":\n")
+		
+		name = winLinks.getstr()
+		if name == "":
+			name = propPackName
+		
+		if not name == "":
+			break
+	
+	links = []
+	while(True):
+		winLinks.erase()
+		winLinks.addstr(0, 0, str(len(links)), curses.color_pair(1) | curses.A_BOLD)
+		winLinks.addstr(" links collected\nInput new links or an empty line to finish:\n")
+		l = winLinks.getstr()
+		if l == "":
+			break
+		else:
+			links.append(l)
+	
+	if destination == 0:
+		packs = client.getCollector()
+	else:
+		packs = client.getQueue()
+	
+	pid = -1
+	for p in packs:
+		if name == p.name:
+			pid = p.pid
+			break
+	
+	if pid == -1:
+		client.addPackage(name, links, destination)
+	else:
+		client.addFiles(pid, links)
+	
+	curses.noecho(); curses.curs_set(0)
+	
+#	print "adding new link"
+#	package = raw_input('package name: ')
+#	links = []
+#	print "links (to finish, input an empty line):"
+#	while(True):
+#		l = raw_input()
+#		if l == "":
+#			break
+#		else:
+#			links.append(l)
+#	print links
+
 
 
 def main(stdscr):
@@ -395,6 +476,13 @@ def main(stdscr):
 			wCurrent.scroll(-1)
 		elif key == curses.KEY_DOWN:
 			wCurrent.scroll(1)   
+		elif key == ord('a') or key == ord('A'):
+			propPackName = "new Package"
+			addLink(wCurrent.getDestination(), wCurrent.getPropPackName())
+			
+			wTabs.draw()
+			wCurrent.draw()
+			drawFooter()
 		else:
 			wCurrent.handleKey(key)
 	
