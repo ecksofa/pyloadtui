@@ -9,11 +9,12 @@ Features
 --------
 - simple and fast user interface
 - Display current downloads, queue, collector
-- remove links / packages from queue / collector
+- add and remove links / packages
+- simply add new links to existing packages
 - ... much more to come
 
-Start pyLoadTui
----------------
+Starting pyLoadTui
+------------------
 To start the script, just type the following command in a terminal  
 	python pyLoadTui.py
 	
@@ -24,4 +25,14 @@ Controlling pyLoadTui
 ---------------------
 up / down - scroll  
 home / end - prev. / next tab (Downloads / Queue / Collector)
+A - add link to selected package or create new package
+R - remove link / package from pyLoad
 
+Adding links
+------------
+You can add links by pressing 'a' or 'A'.
+The new links will be submitted to the queue or collector, depending on where you used the shortcut:  
+- Downloads / Queue -> Queue
+- Collector -> Collector
+If you add links while you are at the Queue or Collector tab, you will see that the selected package's name will be proposed as the package name for your new links, indicated by quare brackets "[selected-package-name]".
+Thus, if you input an empty line as package name, the new links will be added to the existing package.
