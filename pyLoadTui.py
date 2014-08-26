@@ -46,8 +46,7 @@ class Tabs:
 		
 		self.window.move(0,0)
 		for i,e in enumerate(self.entries):
-			if i > 0:
-				self.window.addstr(" ")
+			self.window.addstr(" ")
 			if i == self.selected:
 				self.window.addstr(e, curses.A_REVERSE)	
 			else:
@@ -134,7 +133,8 @@ class Queue:
 			for l in e.links:
 				tmp = "   " + l.name
 				tmp += " (" + downloadStatus[l.status] + ")"
-				self.items[-1][2].append(tmp)
+				self.items[-1][2].append([tmp, l.fid])
+			self.items[-1].append(e.pid)
 		self.prepareLines()
 		
 	def handleKey(self, key):
@@ -143,6 +143,15 @@ class Queue:
 				self.items[self.lines[self.selected][1]][1] = not self.items[self.lines[self.selected][1]][1]
 				self.prepareLines()
 				self.draw()
+		elif key == ord('r') or key == ord('R'):
+			target = self.lines[self.selected]
+			if target[2] == -1:
+				client.deletePackages([ self.items[target[1]][3] ])
+			else:
+				client.deleteFiles([ self.items[target[1]][2][target[2]][1] ])
+			self.load()
+			self.prepareLines()
+			self.draw()
 	
 	def scroll(self, scr):
 		self.selected += scr
@@ -175,7 +184,7 @@ class Queue:
 			if i[1]:
 				for l, j in enumerate(i[2]):
 					self.lines.append([])
-					self.lines[-1].append(j)
+					self.lines[-1].append(j[0])
 					self.lines[-1].append(k)
 					self.lines[-1].append(l)
 	
@@ -192,7 +201,7 @@ class Queue:
 				attr = attr | curses.A_REVERSE
 			if l[2] == -1:
 				attr = attr | curses.color_pair(1)
-			if l[0][-8:] == "(Failed)":
+			if l[0][-8:] == "(Failed)" or l[0][-9:] == "(Offline)":
 				attr = attr | curses.color_pair(2)
 				
 			self.window.addstr(l[0] + "\n", attr)	
@@ -205,6 +214,7 @@ class Collector:
 		self.window = window
 		self.load()
 		self.scrollOffset = 0
+		self.selected = 0
 	
 	def load(self):
 		self.entries = client.getCollectorData()
@@ -218,32 +228,51 @@ class Collector:
 			self.items[-1].append([])
 			for l in e.links:
 				tmp = "    " + l.name
-				tmp += " (" + downloadStatus[l.status] + ") "
-				self.items[-1][2].append(tmp)
+				tmp += " (" + downloadStatus[l.status] + ")"
+				self.items[-1][2].append([tmp, l.fid])
+			self.items[-1].append(e.pid)
 		self.prepareLines()
 	
 	def handleKey(self, key):
-		pass
+		if key == ord(' '):
+			if self.lines[self.selected][2] == -1:
+				self.items[self.lines[self.selected][1]][1] = not self.items[self.lines[self.selected][1]][1]
+				self.prepareLines()
+				self.draw()
+		elif key == ord('r') or key == ord('R'):
+			target = self.lines[self.selected]
+			if target[2] == -1:
+				client.deletePackages([ self.items[target[1]][3] ])
+			else:
+				client.deleteFiles([ self.items[target[1]][2][target[2]][1] ])
+			self.load()
+			self.prepareLines()
+			self.draw()
 	
 	def scroll(self, scr):
-		if scr < 0:
-			if self.scrollOffset + scr > 0:
-				self.scrollOffset += scr
-			else:
-				self.scrollOffset = 0
-		elif scr > 0:
-			if self.scrollOffset + scr < len(self.lines) - (self.window.getmaxyx()[0]-2):
-				self.scrollOffset += scr
-			else:
-				self.scrollOffset = len(self.lines) - (self.window.getmaxyx()[0]-2)
+		self.selected += scr
+		if self.selected < 0:
+			self.selected = 0
+		elif self.selected > len(self.lines) - 1:
+			self.selected = len(self.lines) - 1
+		if self.scrollOffset > self.selected:
+			self.scrollOffset = self.selected
+		elif self.scrollOffset < self.selected - (self.window.getmaxyx()[0]-2) + 1:
+			self.scrollOffset = self.selected - (self.window.getmaxyx()[0]-2) + 1
 				
 	def prepareLines(self):
 		self.lines = []
-		for i in self.items:
-			self.lines.append(i[0])
+		for k, i in enumerate(self.items):
+			self.lines.append([])
+			self.lines[-1].append(i[0])
+			self.lines[-1].append(k)
+			self.lines[-1].append(-1)
 			if i[1]:
-				for j in i[2]:
-					self.lines.append(j)
+				for l, j in enumerate(i[2]):
+					self.lines.append([])
+					self.lines[-1].append(j[0])
+					self.lines[-1].append(k)
+					self.lines[-1].append(l)
 	
 	def draw(self):
 		global log
@@ -252,11 +281,28 @@ class Collector:
 		self.window.move(1,0)
 		
 		lCount = 0
-		for l in self.lines[self.scrollOffset : self.scrollOffset+self.window.getmaxyx()[0]-2]:
-			self.window.addstr(l + "\n")	
+		for i, l in enumerate(self.lines[self.scrollOffset : self.scrollOffset+self.window.getmaxyx()[0]-2]):
+			attr = curses.A_NORMAL
+			if i + self.scrollOffset == self.selected:
+				attr = attr | curses.A_REVERSE
+			if l[2] == -1:
+				attr = attr | curses.color_pair(1)
+			if l[0][-8:] == "(Failed)" or l[0][-9:] == "(Offline)":
+				attr = attr | curses.color_pair(2)
+				
+			self.window.addstr(l[0] + "\n", attr)	
 			
 		self.window.border()
 		self.window.refresh()
+
+def drawFooter():
+		winFooter = curses.newwin(1, width, height-1, 0)
+		winFooter.addch(" ")
+		winFooter.addch("A", curses.color_pair(1) | curses.A_BOLD)
+		winFooter.addstr("dd  ")
+		winFooter.addch("R", curses.color_pair(1) | curses.A_BOLD)
+		winFooter.addstr("emove  ")
+		winFooter.refresh()
 
 def loadDefaultProfile():
 	global fileProfiles
@@ -328,6 +374,7 @@ def main(stdscr):
 	wCurrent = wArray[0]
 	
 	wTabs.draw()
+	drawFooter()
 	
 	stdscr.timeout(reloadTime * 1000)
 	last_time = time.time() + reloadTime

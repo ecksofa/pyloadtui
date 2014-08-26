@@ -9,11 +9,13 @@ Features
 --------
 - simple and fast user interface
 - Display current downloads, queue, collector
+- remove links / packages from queue / collector
+- ... much more to come
 
 Start pyLoadTui
 ---------------
 To start the script, just type the following command in a terminal  
-	python pyLoadTui
+	python pyLoadTui.py
 	
 If you start pyLoadTui for the first time, it will ask you for your pyLoad server data, which will be stored in the profiles file in the pyLoadTui directory.
 You will be also asked for the password required to connect to the pyLoad server, this will not be saved, thus you will need to type in your password at every start of the script.

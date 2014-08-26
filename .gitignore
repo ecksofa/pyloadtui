@@ -2,3 +2,4 @@ ignore-this/
 *~
 *.pyc
 log
+profiles
