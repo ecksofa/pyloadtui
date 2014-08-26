@@ -32,7 +32,7 @@ Adding links
 ------------
 You can add links by pressing 'a' or 'A'.
 The new links will be submitted to the queue or collector, depending on where you used the shortcut:  
-- Downloads / Queue -> Queue
-- Collector -> Collector  
+Downloads / Queue -> Queue  
+Collector -> Collector  
 If you add links while you are at the Queue or Collector tab, you will see that the selected package's name will be proposed as the package name for your new links, indicated by quare brackets "[selected-package-name]".
 Thus, if you input an empty line as package name, the new links will be added to the existing package.
