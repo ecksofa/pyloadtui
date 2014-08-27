@@ -25,9 +25,10 @@ Controlling pyLoadTui
 ---------------------
 up / down - scroll  
 left / right - prev. / next tab (Downloads / Queue / Collector)  
+space bar - expand / collaps package file list  
 A - add link to selected package or create new package  
 R - remove link / package from pyLoad  
-space bar - expand / collaps package file list
+Q - quit
 
 Adding links
 ------------

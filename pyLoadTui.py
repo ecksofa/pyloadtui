@@ -334,6 +334,8 @@ def drawFooter():
 		winFooter.addstr("dd  ")
 		winFooter.addch("R", curses.color_pair(1) | curses.A_BOLD)
 		winFooter.addstr("emove  ")
+		winFooter.addch("Q", curses.color_pair(1) | curses.A_BOLD)
+		winFooter.addstr("uit  ")
 		winFooter.refresh()
 
 def loadDefaultProfile():
@@ -497,10 +499,11 @@ def main(stdscr):
 			wTabs.draw()
 			wCurrent.draw()
 			drawFooter()
+		elif key == ord('q') or key == ord('Q'):
+			break
 		else:
 			wCurrent.handleKey(key)
 	
-	stdscr.getch()
 	curses.echo(); curses.nocbreak(); stdscr.keypad(0)
 	curses.endwin()
 
