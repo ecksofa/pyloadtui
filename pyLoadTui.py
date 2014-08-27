@@ -122,9 +122,11 @@ class Downloads:
 class Queue:	
 	def __init__(self, window):
 		self.window = window
-		self.load()
 		self.scrollOffset = 0
 		self.selected = 0
+		self.expanded = []
+		
+		self.load()
 	
 	def load(self):
 		self.entries = client.getQueueData()
@@ -134,7 +136,7 @@ class Queue:
 			self.items.append([])
 			tmp =  (e.name)
 			self.items[-1].append(tmp)
-			self.items[-1].append(True)
+			self.items[-1].append(e.pid in self.expanded)
 			self.items[-1].append([])
 			for l in e.links:
 				tmp = l.name
@@ -146,7 +148,12 @@ class Queue:
 	def handleKey(self, key):
 		if key == ord(' '):
 			if self.lines[self.selected][2] == -1:
-				self.items[self.lines[self.selected][1]][1] = not self.items[self.lines[self.selected][1]][1]
+				item = self.items[self.lines[self.selected][1]]
+				if item[1]:
+					self.expanded.remove(item[3])
+				else:
+					self.expanded.append(item[3])
+				item[1] = not item[1]
 				self.prepareLines()
 				self.draw()
 		elif key == ord('r') or key == ord('R'):
@@ -224,9 +231,11 @@ class Queue:
 class Collector:	
 	def __init__(self, window):
 		self.window = window
-		self.load()
 		self.scrollOffset = 0
 		self.selected = 0
+		self.expanded = []
+		
+		self.load()
 	
 	def load(self):
 		self.entries = client.getCollectorData()
@@ -236,7 +245,7 @@ class Collector:
 			self.items.append([])
 			tmp =  (e.name)
 			self.items[-1].append(tmp)
-			self.items[-1].append(True)
+			self.items[-1].append(e.pid in self.expanded)
 			self.items[-1].append([])
 			for l in e.links:
 				tmp = l.name
@@ -248,7 +257,12 @@ class Collector:
 	def handleKey(self, key):
 		if key == ord(' '):
 			if self.lines[self.selected][2] == -1:
-				self.items[self.lines[self.selected][1]][1] = not self.items[self.lines[self.selected][1]][1]
+				item = self.items[self.lines[self.selected][1]]
+				if item[1]:
+					self.expanded.remove(item[3])
+				else:
+					self.expanded.append(item[3])
+				item[1] = not item[1]
 				self.prepareLines()
 				self.draw()
 		elif key == ord('r') or key == ord('R'):
@@ -468,9 +482,9 @@ def main(stdscr):
 		
 		key = stdscr.getch()
 
-		if key == curses.KEY_HOME:
+		if key == curses.KEY_LEFT:
 			wCurrent = wArray[wTabs.move(-1)]
-		elif key == curses.KEY_END:
+		elif key == curses.KEY_RIGHT:
 			wCurrent = wArray[wTabs.move(1)]
 		elif key == curses.KEY_UP:
 			wCurrent.scroll(-1)

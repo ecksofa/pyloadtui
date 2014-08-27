@@ -24,9 +24,10 @@ You will be also asked for the password required to connect to the pyLoad server
 Controlling pyLoadTui
 ---------------------
 up / down - scroll  
-home / end - prev. / next tab (Downloads / Queue / Collector)  
+left / right - prev. / next tab (Downloads / Queue / Collector)  
 A - add link to selected package or create new package  
 R - remove link / package from pyLoad  
+space bar - expand / collaps package file list
 
 Adding links
 ------------
