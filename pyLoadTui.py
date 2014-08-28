@@ -127,7 +127,7 @@ class Queue:
 		self.expanded = []
 		
 		self.load()
-	
+			
 	def load(self):
 		self.entries = client.getQueueData()
 		
@@ -167,12 +167,13 @@ class Queue:
 			else:
 				client.deleteFiles([ self.items[target[1]][2][target[2]][1] ])
 			self.load()
-			self.prepareLines()
 			self.draw()
 		elif key == ord('m') or key == ord('M'):
 			target = self.lines[self.selected]
 			if target[2] == -1:
 				client.movePackage(0, self.items[target[1]][3])
+			self.load()
+			self.draw()
 	
 	def scroll(self, scr):
 		self.selected += scr
@@ -277,12 +278,13 @@ class Collector:
 			else:
 				client.deleteFiles([ self.items[target[1]][2][target[2]][1] ])
 			self.load()
-			self.prepareLines()
 			self.draw()
 		elif key == ord('m') or key == ord('M'):
 			target = self.lines[self.selected]
 			if target[2] == -1:
 				client.movePackage(1, self.items[target[1]][3])
+			self.load()
+			self.draw()
 	
 	def scroll(self, scr):
 		self.selected += scr
@@ -347,6 +349,8 @@ def drawFooter():
 		winFooter.addstr("dd  ")
 		winFooter.addch("R", curses.color_pair(1) | curses.A_BOLD)
 		winFooter.addstr("emove  ")
+		winFooter.addch("M", curses.color_pair(1) | curses.A_BOLD)
+		winFooter.addstr("ove  ")
 		winFooter.addch("Q", curses.color_pair(1) | curses.A_BOLD)
 		winFooter.addstr("uit  ")
 		winFooter.refresh()
@@ -474,9 +478,9 @@ def main(stdscr):
 	drawFooter()
 	
 	stdscr.timeout(reloadTime * 1000)
-	last_time = time.time() + reloadTime
+	last_time = time.time() - reloadTime
 	while True:
-		if round(time.time() - last_time) > reloadTime:
+		if round(time.time() - last_time) >= reloadTime:
 			last_time = time.time()
 			wCurrent.load()
 			
@@ -486,8 +490,10 @@ def main(stdscr):
 
 		if key == curses.KEY_LEFT:
 			wCurrent = wArray[wTabs.move(-1)]
+			last_time = time.time() - reloadTime
 		elif key == curses.KEY_RIGHT:
 			wCurrent = wArray[wTabs.move(1)]
+			last_time = time.time() - reloadTime
 		elif key == curses.KEY_UP:
 			wCurrent.scroll(-1)
 		elif key == curses.KEY_DOWN:
@@ -497,8 +503,8 @@ def main(stdscr):
 			addLink(wCurrent.getDestination(), wCurrent.getPropPackName())
 			
 			wTabs.draw()
-			wCurrent.draw()
 			drawFooter()
+			last_time = time.time() - reloadTime
 		elif key == ord('q') or key == ord('Q'):
 			break
 		else:
