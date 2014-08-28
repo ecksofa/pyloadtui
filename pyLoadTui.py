@@ -144,8 +144,12 @@ class Queue:
 				self.items[-1][2].append([tmp, l.fid])
 			self.items[-1].append(e.pid)
 		self.prepareLines()
+		self.scroll(0)
 		
 	def handleKey(self, key):
+		if  self.selected < 0:
+			return False
+			
 		if key == ord(' '):
 			if self.lines[self.selected][2] == -1:
 				item = self.items[self.lines[self.selected][1]]
@@ -165,6 +169,10 @@ class Queue:
 			self.load()
 			self.prepareLines()
 			self.draw()
+		elif key == ord('m') or key == ord('M'):
+			target = self.lines[self.selected]
+			if target[2] == -1:
+				client.movePackage(0, self.items[target[1]][3])
 	
 	def scroll(self, scr):
 		self.selected += scr
@@ -176,16 +184,6 @@ class Queue:
 			self.scrollOffset = self.selected
 		elif self.scrollOffset < self.selected - (self.window.getmaxyx()[0]-2) + 1:
 			self.scrollOffset = self.selected - (self.window.getmaxyx()[0]-2) + 1
-#		if scr < 0:
-#			if self.scrollOffset + scr > 0:
-#				self.scrollOffset += scr
-#			else:
-#				self.scrollOffset = 0
-#		elif scr > 0:
-#			if self.scrollOffset + scr < len(self.lines) - (self.window.getmaxyx()[0]-2):
-#				self.scrollOffset += scr
-#			else:
-#				self.scrollOffset = len(self.lines) - (self.window.getmaxyx()[0]-2)
 				
 	def prepareLines(self):
 		self.lines = []
@@ -226,7 +224,10 @@ class Queue:
 		return 1
 	
 	def getPropPackName(self):
-		return self.items[self.lines[self.selected][1]][0]
+		if self.selected < 0:
+			return ""
+		else:
+			return self.items[self.lines[self.selected][1]][0]
 
 class Collector:	
 	def __init__(self, window):
@@ -253,8 +254,12 @@ class Collector:
 				self.items[-1][2].append([tmp, l.fid])
 			self.items[-1].append(e.pid)
 		self.prepareLines()
+		self.scroll(0)
 	
 	def handleKey(self, key):
+		if  self.selected < 0:
+			return False
+		
 		if key == ord(' '):
 			if self.lines[self.selected][2] == -1:
 				item = self.items[self.lines[self.selected][1]]
@@ -274,6 +279,10 @@ class Collector:
 			self.load()
 			self.prepareLines()
 			self.draw()
+		elif key == ord('m') or key == ord('M'):
+			target = self.lines[self.selected]
+			if target[2] == -1:
+				client.movePackage(1, self.items[target[1]][3])
 	
 	def scroll(self, scr):
 		self.selected += scr
@@ -285,6 +294,8 @@ class Collector:
 			self.scrollOffset = self.selected
 		elif self.scrollOffset < self.selected - (self.window.getmaxyx()[0]-2) + 1:
 			self.scrollOffset = self.selected - (self.window.getmaxyx()[0]-2) + 1
+		if self.scrollOffset < 0:
+			self.scrollOffset = 0
 				
 	def prepareLines(self):
 		self.lines = []
@@ -301,7 +312,6 @@ class Collector:
 					self.lines[-1].append(l)
 	
 	def draw(self):
-		global log
 		self.window.erase()
 		
 		self.window.move(1,0)
@@ -325,7 +335,10 @@ class Collector:
 		return 0
 	
 	def getPropPackName(self):
-		return self.items[self.lines[self.selected][1]][0]
+		if self.selected < 0:
+			return ""
+		else:
+			return self.items[self.lines[self.selected][1]][0]
 
 def drawFooter():
 		winFooter = curses.newwin(1, width, height-1, 0)
@@ -430,19 +443,6 @@ def addLink(destination, propPackName):
 	
 	curses.noecho(); curses.curs_set(0)
 	
-#	print "adding new link"
-#	package = raw_input('package name: ')
-#	links = []
-#	print "links (to finish, input an empty line):"
-#	while(True):
-#		l = raw_input()
-#		if l == "":
-#			break
-#		else:
-#			links.append(l)
-#	print links
-
-
 
 def main(stdscr):
 	global reloadTime

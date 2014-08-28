@@ -10,7 +10,7 @@ Features
 - simple and fast user interface
 - Display current downloads, queue, collector
 - add and remove links / packages
-- simply add new links to existing packages
+- Move packages between Queue and Collector
 - ... much more to come
 
 Starting pyLoadTui
@@ -27,7 +27,8 @@ up / down - scroll
 left / right - prev. / next tab (Downloads / Queue / Collector)  
 space bar - expand / collaps package file list  
 A - add link to selected package or create new package  
-R - remove link / package from pyLoad  
+D - delete link / package from pyLoad  
+M - Move package between Queue and Collector  
 Q - quit
 
 Adding links
